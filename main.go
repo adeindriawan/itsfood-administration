@@ -15,5 +15,5 @@ func main() {
 	})
 	r.GET("/admin", controllers.Dashboard)
 
-	log.Fatal(r.Run())
+	log.Fatal(r.Run(":8090"))
 }
