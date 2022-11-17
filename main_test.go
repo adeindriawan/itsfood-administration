@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 	"net/http"
-	"io/ioutil"
+	"io"
 	"net/http/httptest"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -23,7 +23,7 @@ func TestDashboard(t *testing.T) {
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
-	responseData, _ := ioutil.ReadAll(w.Body)
+	responseData, _ := io.ReadAll(w.Body)
 	assert.Equal(t, mockResponse, string(responseData))
 	assert.Equal(t, http.StatusOK, w.Code)
 }
