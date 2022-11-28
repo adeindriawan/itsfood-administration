@@ -8,7 +8,7 @@ import (
 func AuthorizedActiveAdmin() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		admin := c.MustGet("admin").(models.Admin)
-		if admin.Status != "Activated" || admin.User.Status != "Activated" {
+		if admin.Status != "Active" || admin.User.Status != "Activated" {
 			c.JSON(422, gin.H{
 				"status": "failed",
 				"errors": "Admin/user sedang berstatus tidak aktif.",
