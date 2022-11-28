@@ -42,6 +42,7 @@ func main() {
 
 	r.GET("/admin", controllers.Dashboard)
 	r.POST("/auth/admin/login", controllers.AdminLogin)
+	r.POST("/auth/admin/register", controllers.AdminRegister)
 
 	log.Fatal(r.Run(":8090"))
 }

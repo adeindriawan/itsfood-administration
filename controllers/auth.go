@@ -166,10 +166,10 @@ func ResetPassword(c *gin.Context) {
 }
 
 type AdminRegisterInput struct {
-	Name string				`json:"name"`
-	Email string			`json:"email"`
-	Password string 	`json:"password"`
-	Phone string 			`json:"phone"`
+	Name string				`json:"name" binding:"required"`
+	Email string			`json:"email" binding:"required"`
+	Password string 	`json:"password" binding:"required"`
+	Phone string 			`json:"phone" binding:"required"`
 }
 
 type AdminLoginInput struct {
