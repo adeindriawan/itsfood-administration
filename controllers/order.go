@@ -102,8 +102,8 @@ func NotifyAVendorForAnOrder(c *gin.Context) {
 	}
 
 	// create message to vendor (whatsapp-enable link)
-	orderedAt := utils.ConvertDateToReadable(order.CreatedAt, true)
-	orderedFor := utils.ConvertDateToReadable(order.OrderedFor, true)
+	orderedAt := utils.ConvertDateToPhrase(order.CreatedAt, true)
+	orderedFor := utils.ConvertDateToPhrase(order.OrderedFor, true)
 	var details = ""
 	for _, item := range orderDetails {
 		menuQty := strconv.Itoa(int(item.MenuQty))

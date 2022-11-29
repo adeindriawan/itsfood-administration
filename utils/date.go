@@ -5,7 +5,7 @@ import (
 	"strconv"
 )
 
-func ConvertDateToReadable(date time.Time, withTime bool) string {
+func ConvertDateToPhrase(date time.Time, withTime bool) string {
 	var months = [12]string{"Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"}
 	var readableDate = ""
 	var m int = int(date.Month())
