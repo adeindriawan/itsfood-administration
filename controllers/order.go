@@ -46,6 +46,7 @@ func NotifyAVendorForAnOrder(c *gin.Context) {
 	var orderDetails []OrderDetailResult
 	orderId := c.Param("orderId")
 	vendorId := c.Param("vendorId")
+	adminContext := c.MustGet("admin").(models.Admin)
 
 	orderQuery := services.DB.Table("orders o").
 		Select(`o.id AS ID, o.ordered_for AS OrderedFor, o.ordered_to AS OrderedTo,
@@ -122,7 +123,7 @@ func NotifyAVendorForAnOrder(c *gin.Context) {
 			CreatedBy: orderDetailModel.CreatedBy,
 		}
 		services.DB.Create(&orderDetailDump)
-		services.DB.Model(&orderDetailModel).Where("id = ?", item.ID).Updates(map[string]interface{}{"status": "Sent", "updated_at": time.Now(), "created_by": "Itsfood Administration System"})
+		services.DB.Model(&orderDetailModel).Where("id = ?", item.ID).Updates(map[string]interface{}{"status": "Sent", "updated_at": time.Now(), "created_by": adminContext.User.Name})
 	}
 
 	var orderDetailSentStatus = []string{}
