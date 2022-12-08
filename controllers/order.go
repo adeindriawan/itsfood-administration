@@ -42,7 +42,6 @@ type OrderDetailResult struct {
 }
 
 func NotifyAVendorForAnOrder(c *gin.Context) {
-	var orderModel models.Order
 	var orderDetailModels []models.OrderDetail
 	var order OrderResult
 	var orderDetails []OrderDetailResult
@@ -115,69 +114,31 @@ func NotifyAVendorForAnOrder(c *gin.Context) {
 		return
 	}
 
-	// create message to vendor (whatsapp-enable link)
 	orderedAt := utils.ConvertDateToPhrase(order.CreatedAt, true)
 	orderedFor := utils.ConvertDateToPhrase(order.OrderedFor, true)
 	var details = ""
 	for _, item := range orderDetails {
-		var orderDetailModel models.OrderDetail
 		menuQty := strconv.Itoa(int(item.MenuQty))
 		details += item.MenuName + " " + menuQty + " porsi. Catatan: " + item.Note
-		services.DB.Where("id = ?", item.ID).First(&orderDetailModel) 
-		orderDetailDump := models.OrderDetailDump{
-			SourceID: item.ID,
-			OrderID: orderDetailModel.OrderID,
-			MenuID: orderDetailModel.MenuID,
-			Qty: orderDetailModel.Qty,
-			Price: orderDetailModel.Price,
-			COGS: orderDetailModel.COGS,
-			Note: orderDetailModel.Note,
-			Status: orderDetailModel.Status,
-			CreatedAt: orderDetailModel.CreatedAt,
-			UpdatedAt: time.Now(),
-			CreatedBy: orderDetailModel.CreatedBy,
-		}
-		services.DB.Create(&orderDetailDump)
-		services.DB.Model(&orderDetailModel).Where("id = ?", item.ID).Updates(map[string]interface{}{"status": "Sent", "updated_at": time.Now(), "created_by": adminContext.User.Name})
+		models.UpdateOrderDetail(map[string]interface{}{"id": item.ID}, map[string]interface{}{"status": "Sent", "updated_at": time.Now(), "created_by": adminContext.User.Name})
 	}
 
 	var orderDetailSentStatus = []string{}
-	services.DB.Where("order_id = ?", orderId).Scan(&orderDetailModels)
+	services.DB.Where("order_id = ?", orderId).Find(&orderDetailModels)
 	for _, item := range orderDetailModels {
 		if item.Status == "Sent" {
 			orderDetailSentStatus = append(orderDetailSentStatus, "Sent")
 		}
 	}
 
-	services.DB.Where("id = ?", orderId).First(&orderModel)
-	orderDump := models.OrderDump{
-		SourceID: orderModel.ID,
-		OrderedBy: orderModel.OrderedBy,
-		OrderedFor: orderModel.OrderedFor,
-		OrderedTo: orderModel.OrderedTo,
-		NumOfMenus: orderModel.NumOfMenus,
-		QtyOfMenus: orderModel.QtyOfMenus,
-		Amount: orderModel.Amount,
-		Purpose: orderModel.Purpose,
-		Activity: orderModel.Activity,
-		SourceOfFund: orderModel.SourceOfFund,
-		PaymentOption: orderModel.PaymentOption,
-		Info: orderModel.Info,
-		Status: orderModel.Status,
-		CreatedAt: orderModel.CreatedAt,
-		UpdatedAt: time.Now(),
-		CreatedBy: orderModel.CreatedBy,
-	}
-	services.DB.Create(&orderDump)
-
+	var status string
 	if len(orderDetailSentStatus) == len(orderDetailModels) {
-		orderModel.Status = "ForwardedEntirely"
+		status = "ForwardedEntirely"
 	} else {
-		orderModel.Status = "ForwardedPartially"
+		status = "ForwardedPartially"
 	}
-	orderModel.UpdatedAt = time.Now()
-	orderModel.CreatedBy = "Itsfood Administration System"
-	services.DB.Save(&orderModel)
+	
+	models.UpdateOrder(map[string]interface{}{"id": orderId}, map[string]interface{}{"status": status, "updated_at": time.Now(), "created_by": adminContext.User.Name})
 
 	message := "Ada order untuk " + orderDetails[0].VendorName + " dengan ID #" + orderId + " dari " + order.CustomerName + " di " + order.CustomerUnit
 	message += " pada " + orderedAt + " untuk diantar pada " + orderedFor + " dengan rincian:\n"
