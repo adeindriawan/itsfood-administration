@@ -35,6 +35,7 @@ func main() {
 			authorizedActiveAdmin.Use(middlewares.AuthorizedActiveAdmin())
 			{
 				authorizedActiveAdmin.POST("/orders/:orderId/vendor/:vendorId/notify", controllers.NotifyAVendorForAnOrder)
+				authorizedActiveAdmin.POST("/order-details/:orderDetailId/menu/:menuId/change", controllers.ChangeMenuInAnOrder)
 			}
 		}
 	}

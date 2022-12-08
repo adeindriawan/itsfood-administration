@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"time"
+	"runtime"
 	"regexp"
 	"errors"
 	"strings"
@@ -156,6 +157,83 @@ func NotifyAVendorForAnOrder(c *gin.Context) {
 		},
 		"errors": nil,
 		"description": "Berhasil menyusun notifikasi untuk vendor untuk dikirim via Whatsapp.",
+	})
+}
+
+type ChangeMenuUri struct {
+	orderDetailId int `uri:"orderDetailId" binding:"required"`
+	menuId int 				`uri:"menuId" binding:"required"`
+}
+
+func ChangeMenuInAnOrder(c *gin.Context) {
+	runtime.GOMAXPROCS(2)
+	var uri ChangeMenuUri
+	if err := c.ShouldBindUri(&uri); err != nil {
+		c.JSON(400, gin.H{
+			"status": "failed",
+			"errors": "Tidak bisa mengolah data dari URI yang ada.",
+			"result": nil,
+			"description": "URI yang ada tidak sesuai dengan ketentuan.",
+		})
+		return
+	}
+	orderDetailId := c.Param("orderDetailId")
+	menuId := c.Param("menuId")
+	adminContext := c.MustGet("admin").(models.Admin)
+
+	var orderDetail models.OrderDetail
+	orderDetailQuery := services.DB.Preload("Order").Preload("Menu").Where("id", orderDetailId).First(&orderDetail)
+
+	var menu models.Menu
+	menuQuery := services.DB.Where("id", menuId).First(&menu)
+
+	if orderDetailQuery.RowsAffected == 0 && menuQuery.RowsAffected == 0 {
+		c.JSON(400, gin.H{
+			"status": "failed",
+			"errors": "Tidak ada data pada salah satu atau keduanya dari detail order maupun menu dengan ID tersebut.",
+			"result": nil,
+			"description": "Tidak dapat menemukan detail order atau menu dengan ID yang dimaksud.",
+		})
+		return
+	}
+
+	// get price and COGS of the replacing menu
+	// update the order detail
+	// update the order amount
+	// notify to telegram group
+	orderId := orderDetail.Order.ID
+	oldMenuName := orderDetail.Menu.Name
+	newMenuName := menu.Name
+	newMenuPrice := menu.RetailPrice
+	newMenuCOGS := menu.COGS
+	models.UpdateOrderDetail(map[string]interface{}{"id": orderDetailId}, map[string]interface{}{"menu_id": menuId, "price": newMenuPrice, "cogs": newMenuCOGS, "created_by": adminContext.User.Name, "updated_at": time.Now()})
+
+	var orderDetails []models.OrderDetail
+	var newAmount int
+	orderQuery := services.DB.Where("order_id", orderId).Find(&orderDetails)
+	if orderQuery.Error != nil {
+		c.JSON(400, gin.H{
+			"status": "failed",
+			"errors": orderQuery.Error.Error(),
+			"result": nil,
+			"description": "Tidak dapat mengambil data order dari order ID pada detail order yang sudah ditentukan.",
+		})
+		return
+	}
+	for _, i := range orderDetails {
+		newAmount += int(i.Price) * int(i.Qty)
+	}
+	models.UpdateOrder(map[string]interface{}{"id": orderId}, map[string]interface{}{"amount": newAmount, "updated_at": time.Now(), "created_by": adminContext.User.Name})
+
+	orderID := strconv.Itoa(int(orderId))
+	var telegramMessage string = "Menu " + oldMenuName + " pada order ID #" + orderID + " diganti menjadi " + newMenuName + " oleh " + adminContext.User.Name
+	go services.SendTelegramToGroup(telegramMessage)
+
+	c.JSON(200, gin.H{
+		"status": "success",
+		"errors": nil,
+		"result": nil,
+		"description": "Berhasil mengganti menu pada detail order yang ditentukan.",
 	})
 }
 
