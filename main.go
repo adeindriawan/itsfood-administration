@@ -38,6 +38,7 @@ func main() {
 				authorizedActiveAdmin.POST("/order-details/:orderDetailId/menu/:menuId/change", controllers.ChangeMenuInAnOrder)
 				authorizedActiveAdmin.POST("/order-details/:orderDetailId/qty", controllers.ChangeQtyOfAMenuInAnOrder)
 				authorizedActiveAdmin.POST("/order-details/:orderDetailId/note", controllers.ChangeNoteOfAMenuInAnOrder)
+				authorizedActiveAdmin.POST("/order-details/:orderDetailId/cost", controllers.AddCostToAnOrder)
 			}
 		}
 	}
