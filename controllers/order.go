@@ -160,14 +160,14 @@ func NotifyAVendorForAnOrder(c *gin.Context) {
 	})
 }
 
-type ChangeMenuUri struct {
+type ChangeOrderMenuUri struct {
 	orderDetailId int `uri:"orderDetailId" binding:"required"`
 	menuId int 				`uri:"menuId" binding:"required"`
 }
 
 func ChangeMenuInAnOrder(c *gin.Context) {
 	runtime.GOMAXPROCS(2)
-	var uri ChangeMenuUri
+	var uri ChangeOrderMenuUri
 	if err := c.ShouldBindUri(&uri); err != nil {
 		c.JSON(400, gin.H{
 			"status": "failed",
@@ -234,6 +234,85 @@ func ChangeMenuInAnOrder(c *gin.Context) {
 		"errors": nil,
 		"result": nil,
 		"description": "Berhasil mengganti menu pada detail order yang ditentukan.",
+	})
+}
+
+type ChangeOrderMenuQty struct {
+	Qty uint `json:"qty"`
+}
+
+func ChangeQtyOfAMenuInAnOrder(c *gin.Context) {
+	var uri ChangeOrderMenuUri
+	var qty ChangeOrderMenuQty
+	errBindingUri := c.ShouldBindUri(&uri)
+	errBindingJSON := c.ShouldBindJSON(&qty);
+	if errBindingUri != nil || errBindingJSON != nil {
+		c.JSON(400, gin.H{
+			"status": "failed",
+			"errors": "Tidak bisa mengolah data dari URI maupun JSON yang ada: " + errBindingUri.Error() + " | " + errBindingJSON.Error(),
+			"result": nil,
+			"description": "URI maupun JSON yang ada tidak sesuai dengan ketentuan.",
+		})
+		return
+	}
+	orderDetailId := c.Param("orderDetailId")
+	menuId := c.Param("menuId")
+	adminContext := c.MustGet("admin").(models.Admin)
+
+	var orderDetail models.OrderDetail
+	orderDetailQuery := services.DB.Preload("Order").Preload("Menu").Where("id", orderDetailId).First(&orderDetail)
+
+	var menu models.Menu
+	menuQuery := services.DB.Where("id", menuId).First(&menu)
+
+	if orderDetailQuery.RowsAffected == 0 && menuQuery.RowsAffected == 0 {
+		c.JSON(400, gin.H{
+			"status": "failed",
+			"errors": "Tidak ada data pada salah satu atau keduanya dari detail order maupun menu dengan ID tersebut.",
+			"result": nil,
+			"description": "Tidak dapat menemukan detail order atau menu dengan ID yang dimaksud.",
+		})
+		return
+	}
+
+	orderId := orderDetail.Order.ID
+	menuName := orderDetail.Menu.Name
+	menuQty := orderDetail.Qty
+	// update the menu qty
+	// update the order amount and num_of_qty
+	// notify the telegram group
+	models.UpdateOrderDetail(map[string]interface{}{"id": orderDetailId}, map[string]interface{}{"qty": qty.Qty, "updated_at": time.Now(), "created_by": adminContext.User.Name})
+
+	var orderDetails []models.OrderDetail
+	var newAmount int
+	var newQtyOfMenus int
+	orderQuery := services.DB.Where("order_id", orderId).Find(&orderDetails)
+	if orderQuery.Error != nil {
+		c.JSON(400, gin.H{
+			"status": "failed",
+			"errors": orderQuery.Error.Error(),
+			"result": nil,
+			"description": "Tidak dapat mengambil data order dari order ID pada detail order yang sudah ditentukan.",
+		})
+		return
+	}
+	for _, i := range orderDetails {
+		newAmount += int(i.Price) * int(i.Qty)
+		newQtyOfMenus += int(i.Qty)
+	}
+	models.UpdateOrder(map[string]interface{}{"id": orderId}, map[string]interface{}{"amount": newAmount, "qty_of_menus": newQtyOfMenus, "updated_at": time.Now(), "created_by": adminContext.User.Name})
+
+	orderID := strconv.Itoa(int(orderId))
+	oldQty := strconv.Itoa(int(menuQty))
+	newQty := strconv.Itoa(int(qty.Qty))
+	telegramMessage := "Jumlah menu " + menuName + " pada order ID #" + orderID + " diganti dari " + oldQty + " porsi menjadi " + newQty + " porsi oleh " + adminContext.User.Name
+	go services.SendTelegramToGroup(telegramMessage)
+
+	c.JSON(200, gin.H{
+		"status": "success",
+		"errors": nil,
+		"result": nil,
+		"description": "Berhasil mengubah jumlah menu pada detail order yang dimaksud.",
 	})
 }
 
