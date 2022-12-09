@@ -38,12 +38,12 @@ func main() {
 				authorizedActiveAdmin.POST("/order-details/:orderDetailId/menu/:menuId/change", controllers.ChangeMenuInAnOrder)
 				authorizedActiveAdmin.POST("/order-details/:orderDetailId/qty", controllers.ChangeQtyOfAMenuInAnOrder)
 				authorizedActiveAdmin.POST("/order-details/:orderDetailId/note", controllers.ChangeNoteOfAMenuInAnOrder)
+				authorizedActiveAdmin.PATCH("/order-details/:orderDetailId/status", controllers.ChangeStatusOfAMenuInAnOrder)
 				authorizedActiveAdmin.POST("/order-details/:orderDetailId/cost", controllers.AddCostToAnOrder)
 				authorizedActiveAdmin.POST("/order-details/:orderDetailId/discount", controllers.AddDiscountToAnOrder)
 			}
 		}
 	}
-
 
 	r.GET("/admin", controllers.Dashboard)
 	r.POST("/auth/login", controllers.AdminLogin)

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	// "fmt"
 	"time"
 	"runtime"
 	"regexp"
@@ -9,6 +10,7 @@ import (
 	"strconv"
 	"net/url"
 	"github.com/gin-gonic/gin"
+	// "github.com/gin-gonic/gin/binding"
 	"github.com/adeindriawan/itsfood-administration/models"
 	"github.com/adeindriawan/itsfood-administration/services"
 	"github.com/adeindriawan/itsfood-administration/utils"
@@ -177,8 +179,8 @@ func ChangeMenuInAnOrder(c *gin.Context) {
 		})
 		return
 	}
-	orderDetailId := c.Param("orderDetailId")
-	menuId := c.Param("menuId")
+	orderDetailId := uri.orderDetailId
+	menuId := uri.menuId
 	adminContext := c.MustGet("admin").(models.Admin)
 
 	var orderDetail models.OrderDetail
@@ -221,7 +223,9 @@ func ChangeMenuInAnOrder(c *gin.Context) {
 		return
 	}
 	for _, i := range orderDetails {
-		newAmount += int(i.Price) * int(i.Qty)
+		if i.Status != "Cancelled" {
+			newAmount += int(i.Price) * int(i.Qty)
+		}
 	}
 	models.UpdateOrder(map[string]interface{}{"id": orderId}, map[string]interface{}{"amount": newAmount, "updated_at": time.Now(), "created_by": adminContext.User.Name})
 
@@ -252,9 +256,17 @@ func ChangeQtyOfAMenuInAnOrder(c *gin.Context) {
 	errBindingUri := c.ShouldBindUri(&uri)
 	errBindingJSON := c.ShouldBindJSON(&qty);
 	if errBindingUri != nil || errBindingJSON != nil {
+		var uriBindingError string = ""
+		if errBindingUri != nil {
+			uriBindingError += errBindingUri.Error()
+		}
+		var JSONBindingError string = ""
+		if errBindingJSON != nil {
+			JSONBindingError += errBindingJSON.Error()
+		}
 		c.JSON(400, gin.H{
 			"status": "failed",
-			"errors": "Tidak bisa mengolah data dari URI maupun JSON yang ada: " + errBindingUri.Error() + " | " + errBindingJSON.Error(),
+			"errors": "Tidak bisa mengolah data dari URI maupun JSON yang ada: " + uriBindingError + " | " + JSONBindingError,
 			"result": nil,
 			"description": "URI maupun JSON yang ada tidak sesuai dengan ketentuan.",
 		})
@@ -298,8 +310,10 @@ func ChangeQtyOfAMenuInAnOrder(c *gin.Context) {
 		return
 	}
 	for _, i := range orderDetails {
-		newAmount += int(i.Price) * int(i.Qty)
-		newQtyOfMenus += int(i.Qty)
+		if i.Status != "Cancelled" {
+			newAmount += int(i.Price) * int(i.Qty)
+			newQtyOfMenus += int(i.Qty)
+		}
 	}
 	models.UpdateOrder(map[string]interface{}{"id": orderId}, map[string]interface{}{"amount": newAmount, "qty_of_menus": newQtyOfMenus, "updated_at": time.Now(), "created_by": adminContext.User.Name})
 
@@ -328,9 +342,17 @@ func ChangeNoteOfAMenuInAnOrder(c *gin.Context) {
 	errBindingUri := c.ShouldBindUri(&uri)
 	errBindingJSON := c.ShouldBindJSON(&note);
 	if errBindingUri != nil || errBindingJSON != nil {
+		var uriBindingError string = ""
+		if errBindingUri != nil {
+			uriBindingError += errBindingUri.Error()
+		}
+		var JSONBindingError string = ""
+		if errBindingJSON != nil {
+			JSONBindingError += errBindingJSON.Error()
+		}
 		c.JSON(400, gin.H{
 			"status": "failed",
-			"errors": "Tidak bisa mengolah data dari URI maupun JSON yang ada: " + errBindingUri.Error() + " | " + errBindingJSON.Error(),
+			"errors": "Tidak bisa mengolah data dari URI maupun JSON yang ada: " + uriBindingError + " | " + JSONBindingError,
 			"result": nil,
 			"description": "URI maupun JSON yang ada tidak sesuai dengan ketentuan.",
 		})
@@ -367,6 +389,120 @@ func ChangeNoteOfAMenuInAnOrder(c *gin.Context) {
 		"errors": nil,
 		"result": nil,
 		"description": "Berhasil mengubah catatan menu pada detail order yang dimaksud.",
+	})
+}
+
+type ChangeOrderMenuStatus struct {
+	Status string `json:"status" binding:"required"`
+	Note string `json:"note" binding:"required_if=Status Cancelled"`
+}
+
+func ChangeStatusOfAMenuInAnOrder(c *gin.Context) {
+	runtime.GOMAXPROCS(2)
+	var uri ChangeOrderDetailUri
+	var status ChangeOrderMenuStatus
+	errBindingUri := c.ShouldBindUri(&uri)
+	errBindingJSON := c.ShouldBindJSON(&status);
+	// errBindingWithValidator := c.ShouldBindWith(&status, binding.CustomValidator(cancellationNoteValidator))
+	if errBindingUri != nil || errBindingJSON != nil {
+		var uriBindingError string = ""
+		if errBindingUri != nil {
+			uriBindingError += errBindingUri.Error()
+		}
+		var JSONBindingError string = ""
+		if errBindingJSON != nil {
+			JSONBindingError += errBindingJSON.Error()
+		}
+		c.JSON(400, gin.H{
+			"status": "failed",
+			"errors": "Tidak bisa mengolah data dari URI maupun JSON yang ada: " + uriBindingError + " | " + JSONBindingError,
+			"result": nil,
+			"description": "URI maupun JSON yang ada tidak sesuai dengan ketentuan.",
+		})
+		return
+	}
+	orderDetailId := c.Param("orderDetailId")
+	adminContext := c.MustGet("admin").(models.Admin)
+
+	var orderDetail models.OrderDetail
+	orderDetailQuery := services.DB.Preload("Order").Preload("Menu").Where("id", orderDetailId).First(&orderDetail)
+
+	if orderDetailQuery.Error != nil || orderDetailQuery.RowsAffected == 0 {
+		var errorQueryingOrderDetail string = ""
+		if orderDetailQuery.Error != nil {
+			errorQueryingOrderDetail += orderDetailQuery.Error.Error()
+		}
+		c.JSON(400, gin.H{
+			"status": "failed",
+			"errors": errorQueryingOrderDetail + " atau tidak ada data.",
+			"result": nil,
+			"description": "Gagal mengambil data detail order dari ID yang diberikan, atau tidak ada data pada detail order pada ID tersebut",
+		})
+		return
+	}
+
+	// update the menu status
+	// update order amount, num_of_menus, & qty_of_menus
+	// notify the telegram group
+	orderId := orderDetail.Order.ID
+	menuName := orderDetail.Menu.Name
+	orderID := strconv.Itoa(int(orderId))
+	orderDetailTelegramMessage := "Status pada menu " + menuName + " pada order ID #" + orderID + " diubah menjadi: " + status.Status
+	updatedOrderDetail := map[string]interface{}{
+		"status": status.Status,
+		"updated_at": time.Now(),
+		"created_by": adminContext.User.Name,
+	}
+	if status.Status == "Cancelled" {
+		updatedOrderDetail["note"] = status.Note
+		orderDetailTelegramMessage += " karena: " + status.Note
+	}
+	models.UpdateOrderDetail(map[string]interface{}{"id": orderDetailId}, updatedOrderDetail)
+	orderDetailTelegramMessage += ", oleh " + adminContext.User.Name
+
+	var orderDetails []models.OrderDetail
+	var newAmount int
+	var newQtyOfMenus int
+	var newNumOfMenus int = 0
+	orderQuery := services.DB.Where("order_id", orderId).Find(&orderDetails)
+	if orderQuery.Error != nil {
+		c.JSON(400, gin.H{
+			"status": "failed",
+			"errors": orderQuery.Error.Error(),
+			"result": nil,
+			"description": "Tidak dapat mengambil data order dari order ID pada detail order yang sudah ditentukan.",
+		})
+		return
+	}
+	for _, i := range orderDetails {
+		if i.Status != "Cancelled" {
+			newAmount += int(i.Price) * int(i.Qty)
+			newQtyOfMenus += int(i.Qty)
+			newNumOfMenus += 1
+		}
+	}
+
+	go services.SendTelegramToGroup(orderDetailTelegramMessage)
+
+	updatedOrder := map[string]interface{}{
+		"amount": newAmount,
+		"num_of_menus": newNumOfMenus,
+		"qty_of_menus": newQtyOfMenus,
+		"updated_at": time.Now(),
+		"created_by": "Itsfood Administration Service",
+	}
+	if newNumOfMenus == 0 {
+		updatedOrder["status"] = "Cancelled"
+		orderTelegramMessage := "Order dengan ID #" + orderID + " telah batal otomatis."
+		go services.SendTelegramToGroup(orderTelegramMessage)
+	}
+	models.UpdateOrder(map[string]interface{}{"id": orderId}, updatedOrder)
+
+	c.JSON(200, gin.H{
+		"status": "success",
+		"errors": nil,
+		"result": nil,
+		"description": "Berhasil mengubah status detail order yang dimaksud.",
 	})
 }
 
