@@ -237,13 +237,17 @@ func ChangeMenuInAnOrder(c *gin.Context) {
 	})
 }
 
+type ChangeOrderDetailUri struct {
+	OrderDetailId int `uri:"orderDetailId" binding:"required"`
+}
+
 type ChangeOrderMenuQty struct {
 	Qty uint `json:"qty"`
 }
 
 func ChangeQtyOfAMenuInAnOrder(c *gin.Context) {
 	runtime.GOMAXPROCS(2)
-	var uri ChangeOrderMenuUri
+	var uri ChangeOrderDetailUri
 	var qty ChangeOrderMenuQty
 	errBindingUri := c.ShouldBindUri(&uri)
 	errBindingJSON := c.ShouldBindJSON(&qty);
@@ -257,21 +261,17 @@ func ChangeQtyOfAMenuInAnOrder(c *gin.Context) {
 		return
 	}
 	orderDetailId := c.Param("orderDetailId")
-	menuId := c.Param("menuId")
 	adminContext := c.MustGet("admin").(models.Admin)
 
 	var orderDetail models.OrderDetail
 	orderDetailQuery := services.DB.Preload("Order").Preload("Menu").Where("id", orderDetailId).First(&orderDetail)
 
-	var menu models.Menu
-	menuQuery := services.DB.Where("id", menuId).First(&menu)
-
-	if orderDetailQuery.RowsAffected == 0 && menuQuery.RowsAffected == 0 {
-		c.JSON(400, gin.H{
+	if orderDetailQuery.Error != nil || orderDetailQuery.RowsAffected == 0 {
+		c.JSON(512, gin.H{
 			"status": "failed",
-			"errors": "Tidak ada data pada salah satu atau keduanya dari detail order maupun menu dengan ID tersebut.",
+			"errors": orderDetailQuery.Error.Error() + " atau tidak ada data.",
 			"result": nil,
-			"description": "Tidak dapat menemukan detail order atau menu dengan ID yang dimaksud.",
+			"description": "Gagal mengambil data detail order dari ID yang diberikan, atau tidak ada data pada detail order pada ID tersebut",
 		})
 		return
 	}
@@ -323,7 +323,7 @@ type ChangeOrderMenuNote struct {
 
 func ChangeNoteOfAMenuInAnOrder(c *gin.Context) {
 	runtime.GOMAXPROCS(2)
-	var uri ChangeOrderMenuUri
+	var uri ChangeOrderDetailUri
 	var note ChangeOrderMenuNote
 	errBindingUri := c.ShouldBindUri(&uri)
 	errBindingJSON := c.ShouldBindJSON(&note);
@@ -337,21 +337,17 @@ func ChangeNoteOfAMenuInAnOrder(c *gin.Context) {
 		return
 	}
 	orderDetailId := c.Param("orderDetailId")
-	menuId := c.Param("menuId")
 	adminContext := c.MustGet("admin").(models.Admin)
 
 	var orderDetail models.OrderDetail
 	orderDetailQuery := services.DB.Preload("Order").Preload("Menu").Where("id", orderDetailId).First(&orderDetail)
 
-	var menu models.Menu
-	menuQuery := services.DB.Where("id", menuId).First(&menu)
-
-	if orderDetailQuery.RowsAffected == 0 && menuQuery.RowsAffected == 0 {
+	if orderDetailQuery.Error != nil || orderDetailQuery.RowsAffected == 0 {
 		c.JSON(400, gin.H{
 			"status": "failed",
-			"errors": "Tidak ada data pada salah satu atau keduanya dari detail order maupun menu dengan ID tersebut.",
+			"errors": orderDetailQuery.Error.Error() + " atau tidak ada data.",
 			"result": nil,
-			"description": "Tidak dapat menemukan detail order atau menu dengan ID yang dimaksud.",
+			"description": "Gagal mengambil data detail order dari ID yang diberikan, atau tidak ada data pada detail order pada ID tersebut",
 		})
 		return
 	}
