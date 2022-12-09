@@ -370,7 +370,7 @@ func ChangeNoteOfAMenuInAnOrder(c *gin.Context) {
 	})
 }
 
-type AddMenuCost struct {
+type AddMenuCostOrDiscount struct {
 	Amount uint 		`json:"amount"`
 	Reason string `json:"reason"`
 }
@@ -378,7 +378,7 @@ type AddMenuCost struct {
 func AddCostToAnOrder(c *gin.Context) {
 	runtime.GOMAXPROCS(2)
 	var uri ChangeOrderDetailUri
-	var cost AddMenuCost
+	var cost AddMenuCostOrDiscount
 	errBindingUri := c.ShouldBindUri(&uri)
 	errBindingJSON := c.ShouldBindJSON(&cost);
 	if errBindingUri != nil || errBindingJSON != nil {
@@ -438,6 +438,72 @@ func AddCostToAnOrder(c *gin.Context) {
 		"errors": nil,
 		"result": nil,
 		"description": "Berhasil menyimpan biaya untuk menu pada detail order yang dimaksud.",
+	})
+}
+
+func AddDiscountToAnOrder(c *gin.Context) {
+	runtime.GOMAXPROCS(2)
+	var uri ChangeOrderDetailUri
+	var discount AddMenuCostOrDiscount
+	errBindingUri := c.ShouldBindUri(&uri)
+	errBindingJSON := c.ShouldBindJSON(&discount);
+	if errBindingUri != nil || errBindingJSON != nil {
+		c.JSON(400, gin.H{
+			"status": "failed",
+			"errors": "Tidak bisa mengolah data dari URI maupun JSON yang ada: " + errBindingUri.Error() + " | " + errBindingJSON.Error(),
+			"result": nil,
+			"description": "URI maupun JSON yang ada tidak sesuai dengan ketentuan.",
+		})
+		return
+	}
+	orderDetailId := c.Param("orderDetailId")
+	adminContext := c.MustGet("admin").(models.Admin)
+
+	var orderDetail models.OrderDetail
+	orderDetailQuery := services.DB.Preload("Order").Preload("Menu").Where("id", orderDetailId).First(&orderDetail)
+
+	if orderDetailQuery.Error != nil || orderDetailQuery.RowsAffected == 0 {
+		c.JSON(512, gin.H{
+			"status": "failed",
+			"errors": orderDetailQuery.Error.Error() + " atau tidak ada data.",
+			"result": nil,
+			"description": "Gagal mengambil data detail order dari ID yang diberikan, atau tidak ada data pada detail order pada ID tersebut",
+		})
+		return
+	}
+
+	orderDetailID, _ := strconv.ParseUint(string(orderDetailId), 10, 64)
+	amount := strconv.Itoa(int(discount.Amount))
+	orderId := orderDetail.Order.ID
+	menuName := orderDetail.Menu.Name
+	newDiscount := models.Discount{
+		OrderDetailID: orderDetailID,
+		Amount: discount.Amount,
+		Reason: discount.Reason,
+		Status: "Unpaid",
+		CreatedAt: time.Now(),
+		CreatedBy: adminContext.User.Name,
+	}
+	insertNewDiscount := services.DB.Create(&newDiscount)
+	if insertNewDiscount.Error != nil {
+		c.JSON(512, gin.H{
+			"status": "failed",
+			"errors": insertNewDiscount.Error.Error(),
+			"result": nil,
+			"description": "Gagal menyimpan diskon yang disi.",
+		})
+		return
+	}
+
+	orderID := strconv.Itoa(int(orderId))
+	telegramMessage := "Ada diskon sebesar Rp"+ amount +" ditambahkan dengan keterangan: "+ discount.Reason +", pada menu "+ menuName +" di order ID #"+ orderID +" oleh " + adminContext.User.Name
+	go services.SendTelegramToGroup(telegramMessage)
+
+	c.JSON(200, gin.H{
+		"status": "success",
+		"errors": nil,
+		"result": nil,
+		"description": "Berhasil menyimpan diskon untuk menu pada detail order yang dimaksud.",
 	})
 }
 
