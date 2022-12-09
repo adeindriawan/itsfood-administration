@@ -242,6 +242,7 @@ type ChangeOrderMenuQty struct {
 }
 
 func ChangeQtyOfAMenuInAnOrder(c *gin.Context) {
+	runtime.GOMAXPROCS(2)
 	var uri ChangeOrderMenuUri
 	var qty ChangeOrderMenuQty
 	errBindingUri := c.ShouldBindUri(&uri)
@@ -313,6 +314,63 @@ func ChangeQtyOfAMenuInAnOrder(c *gin.Context) {
 		"errors": nil,
 		"result": nil,
 		"description": "Berhasil mengubah jumlah menu pada detail order yang dimaksud.",
+	})
+}
+
+type ChangeOrderMenuNote struct {
+	Note string `json:"note"`
+}
+
+func ChangeNoteOfAMenuInAnOrder(c *gin.Context) {
+	runtime.GOMAXPROCS(2)
+	var uri ChangeOrderMenuUri
+	var note ChangeOrderMenuNote
+	errBindingUri := c.ShouldBindUri(&uri)
+	errBindingJSON := c.ShouldBindJSON(&note);
+	if errBindingUri != nil || errBindingJSON != nil {
+		c.JSON(400, gin.H{
+			"status": "failed",
+			"errors": "Tidak bisa mengolah data dari URI maupun JSON yang ada: " + errBindingUri.Error() + " | " + errBindingJSON.Error(),
+			"result": nil,
+			"description": "URI maupun JSON yang ada tidak sesuai dengan ketentuan.",
+		})
+		return
+	}
+	orderDetailId := c.Param("orderDetailId")
+	menuId := c.Param("menuId")
+	adminContext := c.MustGet("admin").(models.Admin)
+
+	var orderDetail models.OrderDetail
+	orderDetailQuery := services.DB.Preload("Order").Preload("Menu").Where("id", orderDetailId).First(&orderDetail)
+
+	var menu models.Menu
+	menuQuery := services.DB.Where("id", menuId).First(&menu)
+
+	if orderDetailQuery.RowsAffected == 0 && menuQuery.RowsAffected == 0 {
+		c.JSON(400, gin.H{
+			"status": "failed",
+			"errors": "Tidak ada data pada salah satu atau keduanya dari detail order maupun menu dengan ID tersebut.",
+			"result": nil,
+			"description": "Tidak dapat menemukan detail order atau menu dengan ID yang dimaksud.",
+		})
+		return
+	}
+
+	// update the menu note
+	// notify the telegram group
+	orderId := orderDetail.Order.ID
+	menuName := orderDetail.Menu.Name
+	models.UpdateOrderDetail(map[string]interface{}{"id": orderDetailId}, map[string]interface{}{"note": note.Note, "updated_at": time.Now(), "created_by": adminContext.User.Name})
+
+	orderID := strconv.Itoa(int(orderId))
+	telegramMessage := "Catatan pada menu " + menuName + " pada order ID #" + orderID + " diubah menjadi: " + note.Note + ", oleh " + adminContext.User.Name
+	go services.SendTelegramToGroup(telegramMessage)
+
+	c.JSON(200, gin.H{
+		"status": "success",
+		"errors": nil,
+		"result": nil,
+		"description": "Berhasil mengubah catatan menu pada detail order yang dimaksud.",
 	})
 }
 
