@@ -2,11 +2,12 @@ package main
 
 import (
 	"log"
-	"github.com/gin-gonic/gin"
+
 	"github.com/adeindriawan/itsfood-administration/controllers"
-	"github.com/adeindriawan/itsfood-administration/utils"
-	"github.com/adeindriawan/itsfood-administration/services"
 	"github.com/adeindriawan/itsfood-administration/middlewares"
+	"github.com/adeindriawan/itsfood-administration/services"
+	"github.com/adeindriawan/itsfood-administration/utils"
+	"github.com/gin-gonic/gin"
 )
 
 func init() {
@@ -17,8 +18,9 @@ func init() {
 
 func main() {
 	r := gin.Default()
+	r.Use(utils.UseCORS())
 
-	r.GET("/", func (c *gin.Context) {
+	r.GET("/", func(c *gin.Context) {
 		response := "This is Itsfood Administration Service API Homepage."
 		c.Data(200, "text/html; charset: utf-8", []byte(response))
 	})
