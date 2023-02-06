@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/adeindriawan/itsfood-administration/controllers"
 	"github.com/adeindriawan/itsfood-administration/middlewares"
@@ -52,5 +53,5 @@ func main() {
 	r.POST("/auth/register", controllers.AdminRegister)
 	r.POST("/auth/logout", controllers.Logout)
 
-	log.Fatal(r.Run(":8090"))
+	log.Fatal(r.Run(":" + os.Getenv("PORT")))
 }
