@@ -1,4 +1,4 @@
-package utils
+package middlewares
 
 import (
 	"os"
@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func UseCORS() gin.HandlerFunc {
+func CORS() gin.HandlerFunc {
 	var allowedOrigins = strings.Split(os.Getenv("CORS_ALLOWED_ORIGINS"), ";")
 
 	return cors.New(cors.Config{

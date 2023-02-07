@@ -19,7 +19,7 @@ func init() {
 
 func main() {
 	r := gin.Default()
-	r.Use(utils.UseCORS())
+	r.Use(middlewares.CORS())
 
 	r.GET("/", func(c *gin.Context) {
 		response := "This is Itsfood Administration Service API Homepage."
