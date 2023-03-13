@@ -37,6 +37,10 @@ func main() {
 			authorizedActiveAdmin := authorizedAdmin.Group("/")
 			authorizedActiveAdmin.Use(middlewares.AuthorizedActiveAdmin())
 			{
+				authorizedActiveAdmin.GET("/orders", controllers.GetOrders)
+				authorizedActiveAdmin.GET("/customers", controllers.GetCustomers)
+				authorizedActiveAdmin.GET("/units", controllers.GetUnits)
+				authorizedActiveAdmin.GET("/orders/:id", controllers.GetOrder)
 				authorizedActiveAdmin.POST("/orders/:orderId/vendor/:vendorId/notify", controllers.NotifyAVendorForAnOrder)
 				authorizedActiveAdmin.POST("/order-details/:orderDetailId/menu/:menuId/change", controllers.ChangeMenuInAnOrder)
 				authorizedActiveAdmin.POST("/order-details/:orderDetailId/qty", controllers.ChangeQtyOfAMenuInAnOrder)
