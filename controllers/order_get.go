@@ -158,6 +158,7 @@ func GetOrders(c *gin.Context) {
 			"result":      nil,
 			"description": "Gagal mengeksekusi query.",
 		})
+		return
 	}
 
 	orderData := map[string]interface{}{
@@ -242,6 +243,7 @@ func GetOrder(c *gin.Context) {
 			"message":     "ID tidak valid",
 			"description": "Gagal mengambil data order",
 		})
+		return
 	}
 
 	orderQuery := services.DB.First(&order, orderId)
@@ -253,6 +255,7 @@ func GetOrder(c *gin.Context) {
 			"result":      nil,
 			"description": "Gagal mengeksekusi query order.",
 		})
+		return
 	}
 
 	customerQuery := services.DB.Preload("User").Preload("Unit").First(&customer, order.OrderedBy)
@@ -264,6 +267,7 @@ func GetOrder(c *gin.Context) {
 			"result":      nil,
 			"description": "Gagal mengeksekusi query customer.",
 		})
+		return
 	}
 
 	orderDetailsQuery := services.DB.Preload("Menu.Vendor.User").
@@ -278,6 +282,7 @@ func GetOrder(c *gin.Context) {
 			"result":      nil,
 			"description": "Gagal mengeksekusi query order details.",
 		})
+		return
 	}
 
 	var purchaseAmount int64
