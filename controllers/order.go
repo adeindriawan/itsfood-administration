@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	// "fmt"
 	"net/url"
 	"runtime"
 	"strconv"
@@ -9,7 +8,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	// "github.com/gin-gonic/gin/binding"
 	"github.com/adeindriawan/itsfood-administration/models"
 	"github.com/adeindriawan/itsfood-administration/services"
 	"github.com/adeindriawan/itsfood-administration/utils"
@@ -27,6 +25,10 @@ type OrderResult struct {
 	ID            uint64    `json:"id"`
 	OrderedFor    time.Time `json:"ordered_for"`
 	OrderedTo     string    `json:"ordered_to"`
+	Purpose       string    `json:"purpose"`
+	Status        string    `json:"status"`
+	NumOfMenus    uint      `json:"num_of_menus"`
+	QtyOfMenus    uint      `json:"qty_of_menus"`
 	CustomerName  string    `json:"customer_name"`
 	CustomerPhone string    `json:"customer_phone"`
 	CustomerUnit  string    `json:"customer_unit"`
