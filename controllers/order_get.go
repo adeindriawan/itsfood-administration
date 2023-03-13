@@ -338,6 +338,7 @@ func GetOrder(c *gin.Context) {
 		orderDetail.CreatedBy = od.CreatedBy
 		orderDetail.MenuId = od.MenuID
 		orderDetail.MenuName = od.Menu.Name
+		orderDetail.VendorName = od.Menu.Vendor.User.Name
 		orderDetail.ExtraCosts = extraCosts
 		orderDetail.Discounts = discounts
 
