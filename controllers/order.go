@@ -11,6 +11,7 @@ import (
 	"github.com/adeindriawan/itsfood-administration/models"
 	"github.com/adeindriawan/itsfood-administration/services"
 	"github.com/adeindriawan/itsfood-administration/utils"
+	"golang.org/x/exp/slices"
 )
 
 func DummyAuthorizedController(c *gin.Context) {
@@ -510,6 +511,7 @@ func ChangeStatusOfAMenuInAnOrder(c *gin.Context) {
 type AddMenuCostOrDiscount struct {
 	Amount uint   `json:"amount"`
 	Reason string `json:"reason"`
+	Issuer string `json:"issuer"`
 }
 
 func AddCostToAnOrder(c *gin.Context) {
@@ -551,6 +553,7 @@ func AddCostToAnOrder(c *gin.Context) {
 		OrderDetailID: orderDetailID,
 		Amount:        cost.Amount,
 		Reason:        cost.Reason,
+		Issuer:        cost.Issuer,
 		Status:        "Unpaid",
 		CreatedAt:     time.Now(),
 		CreatedBy:     adminContext.User.Name,
@@ -617,6 +620,7 @@ func AddDiscountToAnOrder(c *gin.Context) {
 		OrderDetailID: orderDetailID,
 		Amount:        discount.Amount,
 		Reason:        discount.Reason,
+		Issuer:        discount.Issuer,
 		Status:        "Unpaid",
 		CreatedAt:     time.Now(),
 		CreatedBy:     adminContext.User.Name,
@@ -641,5 +645,59 @@ func AddDiscountToAnOrder(c *gin.Context) {
 		"errors":      nil,
 		"result":      nil,
 		"description": "Berhasil menyimpan diskon untuk menu pada detail order yang dimaksud.",
+	})
+}
+
+func GetVendorsInAnOrder(c *gin.Context) {
+
+	type VendorInAnOrder struct {
+		ID   uint64 `json:"id"`
+		Name string `json:"name"`
+	}
+
+	var vendorsInAnOrder []VendorInAnOrder
+	var orderDetails []models.OrderDetail
+	orderId, notValidId := strconv.Atoi(c.Param("id"))
+
+	if notValidId != nil {
+		c.JSON(400, gin.H{
+			"status":      "failed",
+			"message":     "ID tidak valid",
+			"description": "Gagal mengambil data order",
+		})
+		return
+	}
+
+	orderDetailsQuery := services.DB.Preload("Menu.Vendor.User").Find(&orderDetails, "order_id = ?", orderId)
+
+	if orderDetailsQuery.Error != nil {
+		c.JSON(512, gin.H{
+			"status":      "failed",
+			"errors":      orderDetailsQuery.Error.Error(),
+			"result":      nil,
+			"description": "Gagal mengeksekusi query order details.",
+		})
+		return
+	}
+
+	for _, od := range orderDetails {
+		vendorId := od.Menu.Vendor.ID
+		vendorName := od.Menu.Vendor.User.Name
+
+		if isVendorInAList := slices.ContainsFunc(vendorsInAnOrder, func(viao VendorInAnOrder) bool {
+			return viao.ID == vendorId
+		}); isVendorInAList == false {
+			vendorsInAnOrder = append(vendorsInAnOrder, VendorInAnOrder{
+				ID:   vendorId,
+				Name: vendorName,
+			})
+		}
+	}
+
+	c.JSON(200, gin.H{
+		"status":      "success",
+		"errors":      nil,
+		"result":      vendorsInAnOrder,
+		"description": "Berhasil mengambil data",
 	})
 }
