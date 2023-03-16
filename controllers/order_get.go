@@ -57,22 +57,22 @@ func GetOrders(c *gin.Context) {
 
 	if doesStartOrderDateParamExist {
 		startOrderDate := startOrderDateParam[0]
-		orderQuery = orderQuery.Where("orders.created_at >= ?", startOrderDate)
+		orderQuery = orderQuery.Where("DATE(orders.created_at) >= ?", startOrderDate)
 	}
 
 	if doesEndOrderDateParamExist {
 		endOrderDate := endOrderDateParam[0]
-		orderQuery = orderQuery.Where("orders.created_at <= ?", endOrderDate)
+		orderQuery = orderQuery.Where("DATE(orders.created_at) <= ?", endOrderDate)
 	}
 
 	if doesStartDeliveryDateParamExist {
 		startDeliveryDate := startDeliveryDateParam[0]
-		orderQuery = orderQuery.Where("orders.ordered_for >= ?", startDeliveryDate)
+		orderQuery = orderQuery.Where("DATE(orders.ordered_for) >= ?", startDeliveryDate)
 	}
 
 	if doesEndDeliveryDateParamExist {
 		endDeliveryDate := endDeliveryDateParam[0]
-		orderQuery = orderQuery.Where("orders.ordered_for <= ?", endDeliveryDate)
+		orderQuery = orderQuery.Where("DATE(orders.ordered_for) <= ?", endDeliveryDate)
 	}
 
 	if doesPurposeParamExist {
@@ -175,59 +175,60 @@ func GetOrders(c *gin.Context) {
 	})
 }
 
-type ExtraCost struct {
-	Amount uint64 `json:"amount"`
-	Reason string `json:"reason"`
-	Issuer string `json:"issuer"`
-}
-
-type Discount struct {
-	Amount uint64 `json:"amount"`
-	Reason string `json:"reason"`
-	Issuer string `json:"issuer"`
-}
-
-type OrderDetail struct {
-	ID         uint64      `json:"id"`
-	Qty        uint        `json:"qty"`
-	Price      uint64      `json:"price"`
-	COGS       uint64      `json:"cogs"`
-	Note       string      `json:"note"`
-	Status     string      `json:"status"`
-	CreatedAt  time.Time   `json:"created_at"`
-	UpdatedAt  time.Time   `json:"updated_at"`
-	CreatedBy  string      `json:"created_by"`
-	MenuId     uint64      `json:"menu_id"`
-	MenuName   string      `json:"menu_name"`
-	VendorName string      `json:"vendor_name"`
-	ExtraCosts []ExtraCost `json:"extra_costs"`
-	Discounts  []Discount  `json:"discounts"`
-}
-
-type OrderInformationResult struct {
-	ID             uint64        `json:"id"`
-	OrderedFor     time.Time     `json:"ordered_for"`
-	OrderedTo      string        `json:"ordered_to"`
-	Purpose        string        `json:"purpose"`
-	Activity       string        `json:"activity"`
-	SourceOfFund   string        `json:"source_of_fund"`
-	PaymentOption  string        `json:"payment_option"`
-	Info           string        `json:"info"`
-	Status         string        `json:"status"`
-	CreatedAt      time.Time     `json:"created_at"`
-	UpdatedAt      time.Time     `json:"updated_at"`
-	CreatedBy      string        `json:"created_by"`
-	PurchaseAmount int64         `json:"purchase_amount"`
-	SalesAmount    int64         `json:"sales_amount"`
-	CustomerId     uint64        `json:"customer_id"`
-	CustomerName   string        `json:"customer_name"`
-	CustomerUnit   string        `json:"customer_unit"`
-	CustomerPhone  string        `json:"customer_phone"`
-	CustomerEmail  string        `json:"customer_email"`
-	OrderDetails   []OrderDetail `json:"order_details"`
-}
-
 func GetOrder(c *gin.Context) {
+
+	type ExtraCost struct {
+		Amount uint64 `json:"amount"`
+		Reason string `json:"reason"`
+		Issuer string `json:"issuer"`
+	}
+
+	type Discount struct {
+		Amount uint64 `json:"amount"`
+		Reason string `json:"reason"`
+		Issuer string `json:"issuer"`
+	}
+
+	type OrderDetail struct {
+		ID         uint64      `json:"id"`
+		Qty        uint        `json:"qty"`
+		Price      uint64      `json:"price"`
+		COGS       uint64      `json:"cogs"`
+		Note       string      `json:"note"`
+		Status     string      `json:"status"`
+		CreatedAt  time.Time   `json:"created_at"`
+		UpdatedAt  time.Time   `json:"updated_at"`
+		CreatedBy  string      `json:"created_by"`
+		MenuId     uint64      `json:"menu_id"`
+		MenuName   string      `json:"menu_name"`
+		VendorName string      `json:"vendor_name"`
+		ExtraCosts []ExtraCost `json:"extra_costs"`
+		Discounts  []Discount  `json:"discounts"`
+	}
+
+	type OrderInformationResult struct {
+		ID             uint64        `json:"id"`
+		OrderedFor     time.Time     `json:"ordered_for"`
+		OrderedTo      string        `json:"ordered_to"`
+		Purpose        string        `json:"purpose"`
+		Activity       string        `json:"activity"`
+		SourceOfFund   string        `json:"source_of_fund"`
+		PaymentOption  string        `json:"payment_option"`
+		Info           string        `json:"info"`
+		Status         string        `json:"status"`
+		CreatedAt      time.Time     `json:"created_at"`
+		UpdatedAt      time.Time     `json:"updated_at"`
+		CreatedBy      string        `json:"created_by"`
+		PurchaseAmount int64         `json:"purchase_amount"`
+		SalesAmount    int64         `json:"sales_amount"`
+		CustomerId     uint64        `json:"customer_id"`
+		CustomerName   string        `json:"customer_name"`
+		CustomerUnit   string        `json:"customer_unit"`
+		CustomerPhone  string        `json:"customer_phone"`
+		CustomerEmail  string        `json:"customer_email"`
+		OrderDetails   []OrderDetail `json:"order_details"`
+	}
+
 	var orderInformation OrderInformationResult
 	var order models.Order
 	var customer models.Customer
