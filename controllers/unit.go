@@ -8,9 +8,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type UnitResult = models.Unit
-
 func GetUnits(c *gin.Context) {
+	type UnitResult = models.Unit
 	var units []UnitResult
 	var messages = []string{}
 
@@ -60,6 +59,7 @@ func GetUnits(c *gin.Context) {
 			"result":      nil,
 			"description": "Gagal mengeksekusi query.",
 		})
+		return
 	}
 
 	unitData := map[string]interface{}{

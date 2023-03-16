@@ -8,13 +8,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type CustomerResult struct {
-	models.Customer
-	Name     string `json:"name"`
-	UnitName string `json:"unit_name"`
-}
-
 func GetCustomers(c *gin.Context) {
+
+	type CustomerResult struct {
+		models.Customer
+		Name     string `json:"name"`
+		UnitName string `json:"unit_name"`
+	}
+
 	var customers []CustomerResult
 	var messages = []string{}
 
@@ -78,6 +79,7 @@ func GetCustomers(c *gin.Context) {
 			"result":      nil,
 			"description": "Gagal mengeksekusi query.",
 		})
+		return
 	}
 
 	customerData := map[string]interface{}{
