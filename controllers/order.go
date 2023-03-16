@@ -456,7 +456,7 @@ func ChangeStatusOfAMenuInAnOrder(c *gin.Context) {
 		"created_by": adminContext.User.Name,
 	}
 	if status.Status == "Cancelled" {
-		updatedOrderDetail["note"] = status.Note
+		updatedOrderDetail["reason_for_cancellation"] = status.Note
 		orderDetailTelegramMessage += " karena: " + status.Note
 	}
 	models.UpdateOrderDetail(map[string]interface{}{"id": orderDetailId}, updatedOrderDetail)
