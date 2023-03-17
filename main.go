@@ -61,6 +61,7 @@ func main() {
 	r.POST("/auth/login", controllers.AdminLogin)
 	r.POST("/auth/register", controllers.AdminRegister)
 	r.POST("/auth/logout", controllers.Logout)
+	r.POST("/token/refresh", controllers.Refresh)
 
 	log.Fatal(r.Run(":" + os.Getenv("PORT")))
 }
