@@ -429,9 +429,17 @@ func Refresh(c *gin.Context) {
 		// Delete the previous refresh token
 		deleted, delErr := DeleteAuth(refreshUuid)
 		if delErr != nil || deleted == 0 {
+			var deleteError string = ""
+			if delErr != nil {
+				deleteError += delErr.Error()
+			}
+			var deletedError string = ""
+			if deleted == 0 {
+				deletedError += "Token sudah terhapus"
+			}
 			c.JSON(500, gin.H{
 				"status": "failed",
-				"errors": delErr.Error(),
+				"errors": "Error karena: " + deleteError + " | " + deletedError,
 				"result": nil,
 				"description": "Tidak bisa membuat access & refresh token yang baru karena gagal menghapus refresh token yang lama.",
 			})
