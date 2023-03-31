@@ -1,35 +1,47 @@
 package utils
 
 import (
-	"os"
 	"fmt"
-	"time"
+	"net/http"
+	"os"
 	"strconv"
 	"strings"
-	"net/http"
-	"github.com/twinj/uuid"
-	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
-	jwt "github.com/golang-jwt/jwt/v4"
+	"time"
+
 	"github.com/adeindriawan/itsfood-administration/services"
+	"github.com/gin-gonic/gin"
+	jwt "github.com/golang-jwt/jwt/v4"
+	"github.com/twinj/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type TokenDetails struct {
-  AccessToken  string
-  RefreshToken string
-  AccessUuid   string
-  RefreshUuid  string
-  AtExpires    int64
-  RtExpires    int64
+	AccessToken  string
+	RefreshToken string
+	AccessUuid   string
+	RefreshUuid  string
+	AtExpires    int64
+	RtExpires    int64
+}
+
+func getTokenDuration() (time.Duration, time.Duration) {
+	atd, _ := strconv.Atoi(os.Getenv("ACCESS_TOKEN_DURATION"))
+	rtd, _ := strconv.Atoi(os.Getenv("REFRESH_TOKEN_DURATION"))
+	accessTokenDuration := time.Duration(atd) * time.Minute
+	refreshTokenDuration := time.Duration(rtd) * time.Minute
+	return accessTokenDuration, refreshTokenDuration
 }
 
 func CreateToken(userId uint64) (*TokenDetails, error) {
-	td := &TokenDetails{}
-  td.AtExpires = time.Now().Add(time.Minute * 15).UnixMilli()
-  td.AccessUuid = uuid.NewV4().String()
+	accessTokenDuration, refreshTokenDuration := getTokenDuration()
 
-  td.RtExpires = time.Now().Add(time.Hour * 24 * 7).UnixMilli()
-  td.RefreshUuid = uuid.NewV4().String()
+	atExpires := time.Now().Add(accessTokenDuration).UnixMilli()
+	td := &TokenDetails{}
+	td.AtExpires = atExpires
+	td.AccessUuid = uuid.NewV4().String()
+
+	td.RtExpires = time.Now().Add(refreshTokenDuration).UnixMilli()
+	td.RefreshUuid = uuid.NewV4().String()
 
 	var err error
 	// creating access token
@@ -38,7 +50,7 @@ func CreateToken(userId uint64) (*TokenDetails, error) {
 	atClaims["authorized"] = true
 	atClaims["access_uuid"] = td.AccessUuid
 	atClaims["user_id"] = userId
-	atClaims["exp"] = time.Now().Add(time.Minute * 15).UnixMilli()
+	atClaims["exp"] = atExpires
 	at := jwt.NewWithClaims(jwt.SigningMethodHS256, atClaims)
 	td.AccessToken, err = at.SignedString([]byte(os.Getenv("ACCESS_SECRET")))
 	if err != nil {
@@ -46,7 +58,6 @@ func CreateToken(userId uint64) (*TokenDetails, error) {
 	}
 
 	// creating refresh token
-	// os.Setenv("REFRESH_SECRET", "loremipsum")
 	rtClaims := jwt.MapClaims{}
 	rtClaims["refresh_uuid"] = td.RefreshUuid
 	rtClaims["user_id"] = userId
@@ -61,16 +72,14 @@ func CreateToken(userId uint64) (*TokenDetails, error) {
 }
 
 func CreateAuth(userId uint64, td *TokenDetails) error {
-	at := time.Unix(td.AtExpires, 0) // converting Unix to UTC (to Time object)
-	rt := time.Unix(td.RtExpires, 0)
-	now := time.Now()
+	accessTokenDuration, refreshTokenDuration := getTokenDuration()
 
-	errAccess := services.GetRedis().Set(td.AccessUuid, strconv.Itoa(int(userId)), at.Sub(now)).Err()
+	errAccess := services.GetRedis().Set(td.AccessUuid, strconv.Itoa(int(userId)), accessTokenDuration).Err()
 	if errAccess != nil {
 		return errAccess
 	}
 
-	errRefresh := services.GetRedis().Set(td.RefreshUuid, strconv.Itoa(int(userId)), rt.Sub(now)).Err()
+	errRefresh := services.GetRedis().Set(td.RefreshUuid, strconv.Itoa(int(userId)), refreshTokenDuration).Err()
 	if errRefresh != nil {
 		return errRefresh
 	}
@@ -80,7 +89,7 @@ func CreateAuth(userId uint64, td *TokenDetails) error {
 
 type AccessDetails struct {
 	AccessUuid string
-	UserId uint64
+	UserId     uint64
 }
 
 func ExtractTokenMetadata(r *http.Request) (*AccessDetails, error) {
@@ -102,7 +111,7 @@ func ExtractTokenMetadata(r *http.Request) (*AccessDetails, error) {
 
 		return &AccessDetails{
 			AccessUuid: accessUuid,
-			UserId: userId,
+			UserId:     userId,
 		}, nil
 	}
 
